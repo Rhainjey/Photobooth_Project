@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paperang P1S Photobooth V5 - Working Bluetooth</title>
+<link href='https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap' rel='stylesheet'>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--bg:#f6f4ef;--fg:#111;--card:#fff;--line:#d8d4ca;--acc:#111;--accfg:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141414;--fg:#eee;--card:#1e1e1e;--line:#333;--acc:#eee;--accfg:#111}}
+:root[data-theme="dark"]{--bg:#141414;--fg:#eee;--card:#1e1e1e;--line:#333;--acc:#eee;--accfg:#111}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:24px;margin:0 0 4px}p.sub{margin:0 0 18px;opacity:.7}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+video,canvas.prev{width:100%;border-radius:10px;background:#000;display:block}
+canvas.out{width:100%;max-width:384px;display:block;margin:0 auto;background:#fff;border:1px solid var(--line)}
+button{font:inherit;padding:9px 14px;border-radius:10px;border:1px solid var(--acc);background:var(--acc);color:var(--accfg);cursor:pointer;margin:4px 4px 0 0}
+button.ghost{background:transparent;color:var(--fg)}button:disabled{opacity:.4;cursor:not-allowed}
+label{display:block;font-size:13px;margin-top:8px;opacity:.8}input[type=text],input[type=range]{width:100%;font:inherit;padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+#log{font:12px/1.4 ui-monospace,monospace;max-height:110px;overflow:auto;white-space:pre-wrap;opacity:.8;margin-top:8px}
+.status{display:inline-block;padding:2px 10px;border-radius:99px;border:1px solid var(--line);font-size:13px}
+a{color:inherit}
+.page{display:none}.page.on{display:block}
+.kid.on{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:100vh;padding:20px 16px;text-align:center;font-family:'Fredoka',ui-rounded,system-ui,sans-serif;font-weight:500;background:linear-gradient(160deg,#ffd6e8,#d6ecff 50%,#fff3b8);color:#2b2350}
+@media (prefers-color-scheme:dark){:root:not([data-theme='light']) .kid.on{background:linear-gradient(160deg,#3a1d4d,#1d2f4d 50%,#4d3f1d);color:#fff}}
+:root[data-theme='dark'] .kid.on{background:linear-gradient(160deg,#3a1d4d,#1d2f4d 50%,#4d3f1d);color:#fff}
+.kid h1{font-size:clamp(40px,10vw,76px);margin:0;line-height:1.05}.kid h2{font-size:clamp(28px,6vw,44px);margin:0}.kid p{margin:0;font-size:clamp(18px,3.5vw,26px)}
+button.kbtn{font:inherit;font-size:28px;font-weight:700;padding:18px 36px;border-radius:999px;border:0;background:#ff5fa2;color:#fff;box-shadow:0 8px 0 #c93b7c;cursor:pointer;margin:0}
+button.kbtn.huge{font-size:clamp(34px,9vw,60px);padding:26px 60px}button.kbtn:active{transform:translateY(6px);box-shadow:0 2px 0 #c93b7c}
+.corner{position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:14px;opacity:.85}
+.kid button.ghost{color:inherit;border-color:currentColor}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;width:100%;max-width:900px}
+button.lcard{background:#fff;color:#2b2350;border:4px solid #fff;border-radius:24px;padding:10px;margin:0;font:inherit;font-size:20px;font-weight:700;box-shadow:0 8px 0 rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;gap:8px}
+button.lcard img{width:100%;max-height:280px;object-fit:contain}button.lcard:active{transform:translateY(5px)}
+.stage{position:relative;width:min(92vw,520px)}
+.stage video{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:28px;border:6px solid #fff;transform:scaleX(-1)}
+.stage img{width:100%;max-height:60vh;object-fit:contain;background:#fff;border-radius:16px;border:6px solid #fff}
+#kcount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(120px,40vw,220px);font-weight:700;color:#fff;text-shadow:0 6px 0 #ff5fa2,0 0 30px rgba(0,0,0,.4);pointer-events:none}
+#kflash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .4s;border-radius:28px;pointer-events:none}
+button.shutter{width:130px;height:130px;border-radius:50%;font-size:48px;line-height:1;border:8px solid #fff;background:#ff4d4d;box-shadow:0 8px 0 #b82e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;margin:0}
+button.shutter small{font-size:20px;font-weight:700}button.shutter:active{transform:translateY(6px);box-shadow:0 2px 0 #b82e2e}
+@media print{html,body{margin:0!important;padding:0!important;background:#fff!important}body>*:not(#printarea){display:none!important}#printarea{display:flex!important;justify-content:center;align-items:flex-start;position:fixed;left:0;top:0;width:100%;height:100%;padding-top:1mm;box-sizing:border-box}#printarea img{display:block}}
+#printarea{display:none}
+
+/* Printer setup is kept outside the kid-facing kiosk screens. */
+.printerbox{max-width:920px;margin:12px auto;padding:14px;border:1px solid #bab5ab;border-radius:14px;background:var(--card);color:var(--fg);font:14px system-ui,sans-serif;text-align:left}
+.printerbox button{font-size:14px}.printerbox select{max-width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.printerbox .hint{font-size:12px;opacity:.8;margin:8px 0 0}.printerbox .state{font-weight:700}.printerbox #btLog{font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto}
+.healthpanel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}.healthheading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.healthgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}.healthgrid>div{padding:9px;background:var(--bg);border-radius:9px;min-width:0}.healthgrid small{display:block;opacity:.7}.healthgrid strong{display:block;overflow-wrap:anywhere}.healthpanel pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.5 monospace;max-height:170px;overflow:auto}.healthpanel summary{cursor:pointer}.healthpanel .hint{font-size:12px}
+</style><style id='pstyle'></style></head><body>
+<div id='pg-start' class='page kid on'>
+ <h1>📸 Photo Booth!</h1><p>Smile, strike a pose, and take a picture home!</p>
+ <button id='kstart' class='kbtn huge'>▶ Click Start</button><p id='kerr'></p>
+ <div class='corner'><button class='ghost' id='ktest'>Testing / Printer setup</button></div>
+</div>
+<div id='pg-layout' class='page kid'>
+ <h2>Pick your style! 🎨</h2><div class='lgrid' id='lgrid'></div>
+ <button class='ghost' id='kback1'>← Back</button>
+</div>
+<div id='pg-booth' class='page kid'>
+ <h2 id='bt'>Strike a pose! 🤩</h2>
+ <div class='stage'><video id='kcam' autoplay playsinline muted></video><img id='kres' alt='Your picture' style='display:none'><div id='kcount'></div><div id='kflash'></div></div>
+ <button id='kshut' class='shutter'>📸<small>5</small></button>
+ <p id='kmsg'></p><p id='kcnt'></p>
+ <button class='ghost' id='kback2'>← Change style</button>
+</div>
+<main id='pg-test' class='page'>
+<button class='ghost' id='backk'>← Back to kiosk</button>
+<h1>🛠 Testing — Photobooth</h1>
+<p class="sub">Original templates and footer details preserved. Choose Web Bluetooth or the original Windows print dialog.</p>
+
+<div class="printerbox" id="printerSetup">
+ <b>🖨️ Printer settings</b>
+ <div><label for="printMode">How to print</label><select id="printMode"><option value="bluetooth">Paperang P1S · Direct Bluetooth (tested-code baseline)</option><option value="windows">Windows print dialog · original tested method</option></select></div>
+ <div><button id="btConnect">🔵 Connect Bluetooth printer</button><button class="ghost" id="btDisconnect" disabled>Disconnect</button><button class="ghost" id="btReconnect">Reconnect previously allowed device</button></div>
+ <p>Status: <span class="state" id="btState">Not connected</span></p>
+ <div id="printerHealth" class="healthpanel" aria-live="polite">
+  <div class="healthheading"><b>Printer health</b><button type="button" id="healthRefresh" class="ghost" disabled>↻ Check printer status</button></div>
+  <div class="healthgrid">
+   <div><small>Bluetooth</small><strong id="healthConnection">Disconnected</strong></div>
+   <div><small>Battery</small><strong id="healthBattery">Unknown</strong></div>
+   <div><small>Paper</small><strong id="healthPaper">Not verified</strong></div>
+   <div><small>Temperature</small><strong id="healthTemp">Not verified</strong></div>
+  </div>
+  <p class="hint" id="healthHint">Battery queries are experimental for P1S. Paper-out and overheat sensing cannot be confirmed until the device's status response is decoded. Bluetooth connected does not mean paper or temperature is OK.</p>
+  <details><summary>Printer responses (diagnostics)</summary><pre id="healthRaw">No status response yet.</pre></details>
+ </div>
+ <div id="txProgress" role="status" aria-live="polite" style="margin:9px 0;display:none"><label for="txBar">Bluetooth transfer: <span id="txPct">0%</span></label><progress id="txBar" value="0" max="100" style="width:100%;height:14px"></progress></div>
+ <div id="btLog" role="status" aria-live="polite">Choose Bluetooth mode and press Connect. Windows pairing by itself does not connect a website.</div>
+ <p class="hint">This version uses the 20-byte BLE packet transport and Paperang command sequence from the HTML you confirmed worked. Direct Bluetooth is the default. Windows print dialog remains optional. Chrome or Edge on localhost/HTTPS is required; Android Chrome requires HTTPS.</p>
+</div>
+<div class="grid">
+ <section class="card">
+  <video id="cam" autoplay playsinline muted style="transform:scaleX(-1);aspect-ratio:1/1;object-fit:cover"></video>
+  <div><button id="start">Start camera</button><button id="snap" disabled>Snap (3s)</button><button class="ghost" id="up">Upload photo</button><input id="file" type="file" accept="image/*" hidden></div>
+  <label>Layout<select id="lay" style="width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)"><option value="social">Social post frame</option><option value="receipt">Receipt (QTY / ITEM)</option><option value="track">Track order receipt</option><option value="polaroid">Polaroid</option></select></label>
+  <label>Title (receipt layouts)<input type="text" id="t1" value=""></label>
+  <label>Line 1 <small>(receipts: QTY | ITEM, or 03:31 | SONG)</small><input type="text" id="c1" value="KEEP SMILING AND START TAKING PICTURES"></label>
+  <label>Line 2<input type="text" id="c2" value="0000-0000-0000"></label>
+  <label>Line 3<input type="text" id="c3" value="WITH THE PEOPLE YOU LIKE"></label>
+  <label>Footer / paragraph (receipt layouts)<input type="text" id="t2" value=""></label>
+  <div><button id="upd">Update</button><button class="ghost" id="rst">Reset</button> <span id="umsg" class="status" style="display:none"></span></div>
+  <label>Paper size (mm): width / height <small>(height 0 = fit to the picture, for continuous rolls)</small><span style="display:flex;gap:6px"><input type="text" id="lw" value="57" inputmode="numeric"><input type="text" id="lh" value="0" inputmode="numeric"></span></label>
+  <label>QR link<input type="text" id="qr" value="https://github.com/tinyprinter/python-paperang"></label>
+  <label>Print darkness <span id="dv">60</span><input type="range" id="dens" min="0" max="100" value="60"></label>
+  <label>Bit order <select id="bo"><option value="msb" selected>MSB first (working default)</option><option value="lsb">LSB first</option></select></label>
+  <label>Bluetooth transfer speed <select id="sp"><option value="safe">Safe · V5 working settings</option><option value="balanced" selected>Balanced · smoother (recommended test)</option><option value="fast">Fast · experimental</option></select></label>
+  <p class="hint">Balanced/Fast reduce transmission pauses. If output has missing lines or errors, switch back to Safe.</p>
+  <label>Black threshold <span id="tv">140</span><input type="range" id="th" min="80" max="200" value="140"></label>
+  <label>Blank space at bottom <span id="pv">40</span> pixels<input type="range" id="pad" min="0" max="300" step="10" value="40"></label>
+  
+ </section>
+ <section class="card">
+  <canvas id="out" class="out" width="384" height="620"></canvas>
+  <div><button id="print">🖨 Print</button><button id="dl" class="ghost">Save PNG</button></div>
+ </section>
+</div>
+<div class="card" style="margin-top:16px;font-size:14px">
+ <b>Original Windows printing setup (fallback)</b>
+ <ul>
+  <li>Plug the TP870 into the computer with USB and install the Grozziie / TP870 Windows driver.</li>
+  <li>In Windows <b>Printers &amp; scanners → TP870 → Printing preferences</b>, set the paper size to your label size (for example 100 × 150 mm) and make it the <b>default printer</b>.</li>
+  <li><b>Print</b> opens the browser print dialog. Choose the TP870, set <b>Margins: None</b> and <b>Scale: 100%</b>.</li>
+  <li>For the kiosk, start Chrome with the <code>--kiosk-printing</code> flag so it prints straight to the default printer without the dialog.</li>
+ </ul>
+</div>
+</main>
+<div id="printarea"><img id="pimg" alt=""></div>
+<script>
+const W=384,$=id=>document.getElementById(id);let H=620;
+const out=$('out'),ctx=out.getContext('2d'),cam=$('cam');
+let photo=null;const log=m=>console.log(m);
+
+function dither(src,size){ // grayscale + contrast + Floyd-Steinberg
+  const c=document.createElement('canvas');c.width=c.height=size;const x=c.getContext('2d');
+  const sw=src.videoWidth||src.naturalWidth||src.width,sh=src.videoHeight||src.naturalHeight||src.height,s=Math.min(sw,sh);
+  x.drawImage(src,(sw-s)/2,(sh-s)/2,s,s,0,0,size,size);
+  const d=x.getImageData(0,0,size,size),p=d.data,g=new Float32Array(size*size);
+  for(let i=0;i<g.length;i++){let v=.299*p[i*4]+.587*p[i*4+1]+.114*p[i*4+2];g[i]=Math.max(0,Math.min(255,(v-128)*1.25+128+8))}
+  for(let y=0;y<size;y++)for(let xx=0;xx<size;xx++){const i=y*size+xx,o=g[i],n=o<128?0:255,e=o-n;g[i]=n;
+    if(xx+1<size)g[i+1]+=e*7/16;if(y+1<size){if(xx>0)g[i+size-1]+=e*3/16;g[i+size]+=e*5/16;if(xx+1<size)g[i+size+1]+=e/16}}
+  for(let i=0;i<g.length;i++){p[i*4]=p[i*4+1]=p[i*4+2]=g[i];p[i*4+3]=255}
+  x.putImageData(d,0,0);return c;
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
+function drawSocial(){
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#000';ctx.fillStyle='#000';ctx.lineWidth=3;
+  rr(4,4,W-8,H-8,30);ctx.stroke();
+  ctx.font='bold 14px sans-serif';ctx.textBaseline='alphabetic';ctx.fillText('05:20',24,34);
+  for(let i=0;i<4;i++)ctx.fillRect(W-86+i*5,32-i*3,3,3+i*3); // signal
+  ctx.lineWidth=2;rr(W-52,22,26,12,3);ctx.stroke();ctx.fillRect(W-49,25,18,6);
+  ctx.beginPath();ctx.arc(38,78,17,0,7);ctx.fill();
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W-26,68+i*10,2,0,7);ctx.fill()}
+  const px=20,py=108,ps=W-40;
+  const ph0=getPhoto(ps);if(ph0)ctx.drawImage(ph0,px,py,ps,ps);else{ctx.fillStyle='#ddd';ctx.fillRect(px,py,ps,ps);ctx.fillStyle='#000';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('Your photo here',W/2,py+ps/2);ctx.textAlign='left'}
+  ctx.lineWidth=2;ctx.strokeStyle='#000';ctx.strokeRect(px,py,ps,ps);
+  // Instagram-inspired outline controls, rendered as vector paths for crisp thermal output.
+  const iy=py+ps+26;
+  ctx.save();ctx.strokeStyle='#000';ctx.fillStyle='#000';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  // Heart / Like
+  ctx.beginPath();
+  ctx.moveTo(28,iy+10);
+  ctx.bezierCurveTo(24,iy+6,13,iy-2,13,iy-10);
+  ctx.bezierCurveTo(13,iy-21,26,iy-23,31,iy-13);
+  ctx.bezierCurveTo(36,iy-23,49,iy-21,49,iy-10);
+  ctx.bezierCurveTo(49,iy-2,38,iy+6,31,iy+13);
+  ctx.closePath();ctx.stroke();
+  // Comment bubble / Reply
+  ctx.beginPath();ctx.moveTo(63,iy-15);
+  ctx.bezierCurveTo(55,iy-8,56,iy+4,65,iy+9);
+  ctx.lineTo(61,iy+17);ctx.lineTo(73,iy+11);
+  ctx.bezierCurveTo(87,iy+12,96,iy+1,94,iy-10);
+  ctx.bezierCurveTo(92,iy-22,72,iy-23,63,iy-15);
+  ctx.closePath();ctx.stroke();
+  // Paper-plane / Share or Send
+  ctx.beginPath();ctx.moveTo(107,iy-6);ctx.lineTo(138,iy-19);ctx.lineTo(128,iy+15);ctx.lineTo(119,iy+3);ctx.lineTo(107,iy-6);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(119,iy+3);ctx.lineTo(138,iy-19);ctx.stroke();
+  // Carousel indicators and saved-post bookmark
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W/2+12+i*8,iy-2,1.6,0,Math.PI*2);ctx.fill()}
+  ctx.beginPath();ctx.moveTo(W-40,iy-17);ctx.lineTo(W-22,iy-17);ctx.lineTo(W-22,iy+13);ctx.lineTo(W-31,iy+5);ctx.lineTo(W-40,iy+13);ctx.closePath();ctx.stroke();
+  ctx.restore();
+  const ty=iy+30;ctx.font='bold 13px sans-serif';ctx.fillText('1314 likes',20,ty);
+  ctx.font='12px sans-serif';
+  const fit=(t,y)=>{let s=t;while(ctx.measureText(s).width>W-120&&s.length>3)s=s.slice(0,-1);ctx.fillText(s,20,y)};
+  fit($('c1').value,ty+20);fit($('c2').value,ty+38);fit($('c3').value,ty+56);
+  ctx.fillStyle='#444';ctx.fillText('All 520 comments',20,ty+78);ctx.fillStyle='#000';
+  try{const q=qrcode(0,'M');q.addData($('qr').value||' ');q.make();const n=q.getModuleCount(),qs=72,m=qs/n,qx=W-qs-24,qy=ty+8;
+    ctx.fillStyle='#fff';ctx.fillRect(qx-3,qy-3,qs+6,qs+6);ctx.fillStyle='#000';
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(qx+c*m,qy+r*m,Math.ceil(m),Math.ceil(m))}catch(e){}
+}
+['c1','c2','c3','qr','t1','t2'].forEach(i=>$(i).oninput=()=>draw());
+
+$('start').onclick=async()=>{try{cam.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280}}});$('snap').disabled=false}catch(e){log('Camera: '+e.message)}};
+$('snap').onclick=async()=>{const b=$('snap');for(let i=3;i>0;i--){b.textContent=i+'…';await new Promise(r=>setTimeout(r,800))}b.textContent='Snap (3s)';
+  const t=document.createElement('canvas');t.width=t.height=Math.min(cam.videoWidth,cam.videoHeight);const x=t.getContext('2d');x.translate(t.width,0);x.scale(-1,1);
+  x.drawImage(cam,(cam.videoWidth-t.width)/2,(cam.videoHeight-t.height)/2,t.width,t.height,0,0,t.width,t.height);setRaw(t)};
+$('up').onclick=()=>$('file').click();
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{setRaw(im)};im.src=URL.createObjectURL(f)};
+$('dl').onclick=()=>{const a=document.createElement('a');a.download='photobooth.png';a.href=out.toDataURL();a.click()};
+
+/* ---- Layouts (single photo) ---- */
+let raw=null,_pc={};
+function setRaw(s){raw=s;_pc={};draw()}
+function getPhoto(s){if(!raw)return null;return _pc[s]||(_pc[s]=dither(raw,s))}
+function ph(x,y,s){const p=getPhoto(s);if(p)ctx.drawImage(p,x,y,s,s);else{ctx.fillStyle='#ddd';ctx.fillRect(x,y,s,s);ctx.fillStyle='#000';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('Your photo here',x+s/2,y+s/2);ctx.textAlign='left'}ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeRect(x,y,s,s)}
+function fitTxt(t,mw){let s=t;while(ctx.measureText(s).width>mw&&s.length>1)s=s.slice(0,-1);return s}
+function wrapL(c,t,mw){const o=[];let l='';for(const w of t.split(/\s+/).filter(Boolean)){const tt=l?l+' '+w:w;if(c.measureText(tt).width>mw&&l){o.push(l);l=w}else l=tt}if(l)o.push(l);return o}
+function dash(y){ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1.5;ctx.strokeStyle='#000';ctx.beginPath();ctx.moveTo(24,y);ctx.lineTo(W-24,y);ctx.stroke();ctx.restore()}
+function zig(h){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,h);const n=30,st=(W-20)/n;ctx.beginPath();ctx.moveTo(10,8);for(let i=0;i<n;i++){ctx.lineTo(10+i*st+st/2,2);ctx.lineTo(10+(i+1)*st,8)}ctx.lineTo(W-10,h-8);for(let i=n;i>0;i--){ctx.lineTo(10+i*st-st/2,h-2);ctx.lineTo(10+(i-1)*st,h-8)}ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke()}
+function drawQR(x,y,s){try{const q=qrcode(0,'M');q.addData($('qr').value||' ');q.make();const n=q.getModuleCount(),m=s/n;ctx.fillStyle='#000';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(x+c*m,y+r*m,Math.ceil(m),Math.ceil(m))}catch(e){}}
+function barcode(x,y,w,h){let s=5381;for(const ch of ($('qr').value||'x'))s=(s*33+ch.charCodeAt(0))>>>0;const rnd=()=>(s=(s*1664525+1013904223)>>>0)/4294967296;let cx=x,k=true;ctx.fillStyle='#000';while(cx<x+w){const bw=Math.min(1+Math.floor(rnd()*4),x+w-cx);if(k)ctx.fillRect(cx,y,bw,h);cx+=bw;k=!k}}
+const parts=id=>{const p=$(id).value.split('|');return p.length>1?[p[0].trim(),p.slice(1).join('|').trim()]:['',p[0].trim()]};
+const MONO='ui-monospace,Menlo,Consolas,monospace';
+
+function drawReceipt(){
+ zig(H);ctx.fillStyle='#000';
+ const t=$('t1').value||'RECEIPT';let fs=40;ctx.font='900 '+fs+'px Georgia,serif';while(ctx.measureText(t).width>W-150&&fs>16){fs-=2;ctx.font='900 '+fs+'px Georgia,serif'}
+ ctx.textAlign='center';ctx.fillText(t,W/2,50);ctx.font='bold 16px '+MONO;ctx.textAlign='left';ctx.fillText('*****',22,46);ctx.textAlign='right';ctx.fillText('*****',W-22,46);
+ dash(66);ctx.textAlign='left';ctx.font='bold 11px '+MONO;ctx.fillText('QTY',30,86);ctx.fillText('ITEM',88,86);dash(96);
+ ctx.font='11px '+MONO;['c1','c2','c3'].forEach((id,i)=>{const [q,it]=parts(id);ctx.fillText(q,30,116+i*18);ctx.fillText(fitTxt(it,W-88-26),88,116+i*18)});
+ dash(164);ph(28,180,328);
+ ctx.textAlign='center';ctx.fillStyle='#000';ctx.font='bold 13px '+MONO;ctx.fillText(fitTxt('******* '+($('t2').value||'THANK YOU')+' *******',W-40),W/2,540);
+ barcode(72,556,240,46)}
+
+function trackLines(){const m=document.createElement('canvas').getContext('2d');m.font='9px '+MONO;return wrapL(m,$('t2').value,280)}
+function trackH(){return 570+(Math.max(1,trackLines().length)-1)*13+142}
+function drawTrack(){
+ zig(H);ctx.fillStyle='#000';ctx.textAlign='center';
+ const tt0=($('t1').value||'SUMMER go crazy').trim(),i0=tt0.indexOf(' '),a=(i0<0?tt0:tt0.slice(0,i0)).toUpperCase(),b=i0<0?'':tt0.slice(i0+1);
+ let fs=38;ctx.font='900 '+fs+'px "Arial Black",Arial,sans-serif';while(ctx.measureText(a).width>W-80&&fs>14){fs-=2;ctx.font='900 '+fs+'px "Arial Black",Arial,sans-serif'}
+ ctx.fillText(a,W/2,62);ctx.font='italic bold 24px Georgia,serif';ctx.fillText(b,W/2,88);
+ ctx.font='bold 9px '+MONO;ctx.fillText('TRACK ORDER',W/2,114);ctx.font='8px '+MONO;ctx.fillText(new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}).toUpperCase(),W/2,127);
+ dash(138);let tot=0,ok=true;ctx.font='10px '+MONO;
+ ['c1','c2','c3'].forEach((id,i)=>{const [r,l]=[parts(id)[0],parts(id)[1]];ctx.textAlign='left';ctx.fillText(fitTxt(l,W-52-60),26,156+i*16);ctx.textAlign='right';ctx.fillText(r,W-26,156+i*16);const m=r.match(/^(\d+):(\d+)$/);if(m)tot+=+m[1]*60+ +m[2];else ok=false});
+ dash(198);ctx.textAlign='left';ctx.fillText('TOTAL',26,214);ctx.textAlign='right';ctx.fillText(ok?String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0'):'--:--',W-26,214);dash(224);
+ ph(40,240,304);
+ const ls=trackLines();ctx.textAlign='center';ctx.font='9px '+MONO;ls.forEach((l,i)=>ctx.fillText(l,W/2,570+i*13));
+ const ye=570+(Math.max(1,ls.length)-1)*13;ctx.font='8px '+MONO;ctx.fillText('ALL RIGHTS RESERVED',W/2,ye+26);drawQR(W/2-32,ye+34,64);ctx.font='bold 8px '+MONO;ctx.fillText('THE ART OF THE MOMENT',W/2,ye+116)}
+
+function drawPolaroid(){
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#000';ctx.lineWidth=3;rr(8,14,W-16,H-24,6);ctx.stroke();ph(32,40,320);
+ ctx.save();ctx.translate(W/2,14);ctx.rotate(-.05);ctx.fillStyle='#fff';ctx.fillRect(-38,-13,76,26);ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.strokeRect(-38,-13,76,26);ctx.restore();
+ ctx.fillStyle='#000';ctx.textAlign='center';ctx.font='italic 30px "Brush Script MT","Segoe Script",cursive';ctx.fillText(fitTxt($('c1').value,W-70),W/2,412);
+ ctx.font='11px '+MONO;ctx.fillText(fitTxt($('c2').value,W-70),W/2,438);ctx.fillText(fitTxt($('c3').value,W-70),W/2,456)}
+
+const LAY={social:[620,drawSocial],receipt:[632,drawReceipt],track:[0,drawTrack],polaroid:[480,drawPolaroid]};
+function draw(){const k=$('lay').value,h=k==='track'?trackH():LAY[k][0];if(out.height!==h)out.height=h;H=h;ctx.setLineDash([]);ctx.textAlign='left';ctx.textBaseline='alphabetic';LAY[k][1]()}
+const DEF={
+ social:['','KEEP SMILING AND START TAKING PICTURES','0000-0000-0000','WITH THE PEOPLE YOU LIKE',''],
+ receipt:['RECEIPT','24 | HOURS A DAY THINKING BOUT YOU','7 | DAYS IN A WEEK','365 | TIRED ALL THE TIME','THANK YOU'],
+ track:['SUMMER go crazy','03:31 | LAZY LOVE - THEE SACRED SOUL','04:00 | SEASONS - WAVE TO EARTH','04:23 | EVERYTHING - THE BLACK GROVES','Crafted for the raw moods made for what matters most. Every detail designed to capture the moment as it is. Simple, honest, and effortlessly timeless.'],
+ polaroid:['','best day ever','10.14.2026','','']};
+$('lay').onchange=()=>{const d=CUST[$('lay').value]||DEF[$('lay').value];['t1','c1','c2','c3','t2'].forEach((id,i)=>$(id).value=d[i]);draw()};
+
+/* ---- Kid kiosk flow ---- */
+let stream=null,kt=null,busy=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function go(id){clearTimeout(kt);document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id===id));window.scrollTo(0,0);
+ if(id==='pg-start'){raw=null;_pc={};busy=false}
+ if(id==='pg-layout')buildThumbs();if(id==='pg-booth')boothReset();if(id==='pg-test')draw()}
+async function startCam(){if(stream&&stream.active)return true;
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280}}});cam.srcObject=stream;$('kcam').srcObject=stream;$('snap').disabled=false;return true}
+ catch(e){$('kerr').textContent='The camera is blocked. Please ask a grown-up to allow it.';return false}}
+const KL=[['social','📱 Selfie Post'],['receipt','🧾 Receipt'],['track','🎵 Track Order'],['polaroid','📷 Polaroid']];
+/* ---- Original Windows printing through the browser dialog, preserved ---- */
+async function printWindows(){
+ const lw=+$('lw').value||57,lh=+$('lh').value||0,mg=1,S=4,pageH0=lh;
+ let iw=lw-2*mg,ih=iw*H/W;const pageH=pageH0||Math.ceil(ih)+2;if(ih>pageH-1){ih=pageH-1;iw=ih*W/H}
+ $('pimg').style.width=iw+'mm';$('pimg').style.height=ih+'mm';
+ const c=document.createElement('canvas');c.width=W*S;c.height=H*S;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(out,0,0,c.width,c.height);
+ $('pstyle').textContent='@page{size:'+lw+'mm '+pageH+'mm;margin:0}';
+ const img=$('pimg');await new Promise(r=>{img.onload=r;img.src=c.toDataURL('image/png')});
+ await new Promise(r=>{const done=()=>{window.removeEventListener('afterprint',done);r()};window.addEventListener('afterprint',done);setTimeout(done,20000);window.print()})}
+let port=null,bleChar=null;
+/* ---- Paperang protocol (reverse-engineered, see python-paperang) ---- */
+const KEY_STD=0x6968634^0x2e696d, KEY_DEV=0x35769521;
+const T=new Uint32Array(256).map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});
+function crc32(b,seed){let c=(seed^0xffffffff)>>>0;for(const v of b)c=T[(c^v)&255]^(c>>>8);return (c^0xffffffff)>>>0}
+let crcKey=KEY_STD,idx=0;
+function pkt(cmd,data){data=data||new Uint8Array(0);const n=data.length,o=new Uint8Array(n+9),dv=new DataView(o.buffer);
+  o[0]=2;o[1]=cmd;o[2]=idx++&255;dv.setUint16(3,n,true);o.set(data,5);dv.setUint32(5+n,crc32(data,crcKey),true);return fixTail(o,n)}
+function fixTail(o,n){const r=new Uint8Array(n+10);r.set(o.subarray(0,n+9));r[n+9]=3;return r}
+const u32=v=>{const b=new Uint8Array(4);new DataView(b.buffer).setUint32(0,v,true);return b};
+const u16=v=>{const b=new Uint8Array(2);new DataView(b.buffer).setUint16(0,v,true);return b};
+// Safe intentionally preserves V5's proven transfer behavior.
+const TRANSFER={safe:{chunkDelay:10,blockDelay:40,withoutResponse:false},balanced:{chunkDelay:6,blockDelay:15,withoutResponse:true},fast:{chunkDelay:2,blockDelay:5,withoutResponse:true}};
+function transferSettings(){return TRANSFER[$('sp').value]||TRANSFER.safe}
+function setTxProgress(percent){const el=$('txProgress');el.style.display='block';const n=Math.max(0,Math.min(100,Math.round(percent)));$('txBar').value=n;$('txPct').textContent=n+'%'}
+async function send(bytes){
+  if(port){const w=port.writable.getWriter();try{await w.write(bytes)}finally{w.releaseLock()}}
+  else if(bleChar){
+    const sz=20,p=bleChar.properties,profile=transferSettings();
+    for(let i=0;i<bytes.length;i+=sz){
+      const c=bytes.slice(i,i+sz);
+      try{
+        if(profile.withoutResponse&&p.writeWithoutResponse)await bleChar.writeValueWithoutResponse(c);
+        else if(p.write)await bleChar.writeValueWithResponse(c);
+        else if(p.writeWithoutResponse)await bleChar.writeValueWithoutResponse(c);
+        else throw Error('Characteristic is not writable');
+      }catch(e){
+        // Preserve V5 recovery behavior, but don't retry an unsupported write.
+        await wait(40);
+        if(p.write)await bleChar.writeValueWithResponse(c);
+        else throw e;
+      }
+      // Retain the V5 10ms pacing in Safe; use reduced pacing otherwise.
+      if(profile.chunkDelay)await wait(profile.chunkDelay);
+    }
+  } else throw new Error('Not connected');
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function bitmap(){ // 1bpp, 48 bytes/row, LSB = leftmost pixel, 1 = black
+  const d=ctx.getImageData(0,0,W,H).data,rows=new Uint8Array(48*(H+ +$('pad').value)),TH=+$('th').value,MS=$('bo').value==='msb';
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;if(.299*d[i]+.587*d[i+1]+.114*d[i+2]<TH)rows[y*48+(x>>3)]|=MS?128>>(x&7):1<<(x&7)}
+  return rows}
+async function doPrint(){
+  const rows=bitmap(),profile=transferSettings();
+  log('Sending '+H+' image rows ('+$('sp').value+' mode)…');setTxProgress(0);
+  await send(pkt(0x20,u32(KEY_DEV)));crcKey=KEY_DEV;await wait(100);
+  await send(pkt(0x10,new Uint8Array([Math.round($('dens').value*0.67)+0])));
+  await send(pkt(0x1e,new Uint8Array([1])));await wait(100);
+  const CH=48*16,total=Math.ceil(rows.length/CH);
+  for(let i=0,n=0;i<rows.length;i+=CH,n++){
+    await send(pkt(0x00,rows.subarray(i,i+CH)));
+    setTxProgress(100*(n+1)/total);
+    if(profile.blockDelay)await wait(profile.blockDelay);
+  }
+  await send(pkt(0x1a,u16(120)));
+  setTxProgress(100);log('Transfer complete. Paper is feeding.');
+}
+
+/* Connection UI, adapted from the tested HTML. */
+// Status checks are optional and do not alter the proven print pipeline.
+// Queries: 0x10 battery, 0x0c general status, 0x12 temperature (not validated on P1S).
+// No automatic paper-out / thermal fault decoding is asserted for this model.
+let notifyChar=null,notificationBuffer=new Uint8Array(0),responseWaiter=null,healthBusy=false;
+const hex=b=>Array.from(b,v=>v.toString(16).padStart(2,'0')).join(' ');
+function clearHealth(){
+ $('healthBattery').textContent='Unknown';$('healthPaper').textContent='Not verified';$('healthTemp').textContent='Not verified';
+ $('healthConnection').textContent='Disconnected';$('healthRefresh').disabled=true;
+ $('healthRaw').textContent='No status response yet.';
+}
+function printerNotifications(event){
+ const value=event.target.value;
+ const incoming=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);
+ const combined=new Uint8Array(notificationBuffer.length+incoming.length);
+ combined.set(notificationBuffer);combined.set(incoming,notificationBuffer.length);notificationBuffer=combined;
+ // Standard framed Paperang response: 02 CMD INDEX LENGTH_LE PAYLOAD CRC32 03.
+ while(notificationBuffer.length){
+  const start=notificationBuffer.indexOf(2);
+  if(start<0){notificationBuffer=new Uint8Array(0);return;}
+  if(start>0)notificationBuffer=notificationBuffer.slice(start);
+  if(notificationBuffer.length<10)return;
+  const len=notificationBuffer[3]|(notificationBuffer[4]<<8);
+  if(len>2048){notificationBuffer=notificationBuffer.slice(1);continue;}
+  const total=len+10;
+  if(notificationBuffer.length<total)return;
+  const frame=notificationBuffer.slice(0,total);notificationBuffer=notificationBuffer.slice(total);
+  if(frame[total-1]!==3)continue;
+  const command=frame[1],payload=frame.slice(5,5+len);
+  $('healthRaw').textContent+='\nRX 0x'+command.toString(16).padStart(2,'0')+' data ['+hex(payload.slice(0,40))+'] ('+payload.length+' bytes)';
+  if(responseWaiter && responseWaiter.command===command){const done=responseWaiter;responseWaiter=null;done.resolve(payload)}
+ }
+}
+async function queryPrinter(command){
+ if(!notifyChar)throw Error('Notifications unavailable on this connection');
+ if(responseWaiter)throw Error('A response is already pending');
+ let resolveResponse;
+ const answer=new Promise(resolve=>{resolveResponse=resolve});
+ responseWaiter={command,resolve:resolveResponse};
+ try{
+   await send(pkt(command,new Uint8Array(0)));
+   const result=await Promise.race([answer,wait(1700).then(()=>null)]);
+   return result;
+ }finally{if(responseWaiter?.command===command)responseWaiter=null;}
+}
+async function refreshPrinterHealth(){
+ if(healthBusy||btBusy)return;
+ if(!bleChar||!btDevice?.gatt?.connected){btMessage('Connect Bluetooth first to check printer health.');return;}
+ healthBusy=true;$('healthRefresh').disabled=true;
+ $('healthRaw').textContent='Checking supported responses…';
+ $('healthBattery').textContent='Checking…';
+ try{
+  if(!notifyChar){$('healthBattery').textContent='Unavailable';$('healthRaw').textContent='Notification characteristic not available. Cannot read P1S status.';return;}
+  // A read-only battery request is deliberately sent only when the user clicks Check.
+  const battery=await queryPrinter(0x10);
+  if(battery && battery.length===1 && battery[0]<=100){
+    $('healthBattery').textContent=battery[0]+'%';
+  }else{
+    $('healthBattery').textContent='Unverified';
+    $('healthRaw').textContent+='\nBattery response '+(battery?'length '+battery.length:'not received')+'; percentage not safely decoded.';
+  }
+  // General status response displayed raw only; P1S paper/thermal fault flags unverified.
+  const status=await queryPrinter(0x0c);
+  if(!status)$('healthRaw').textContent+='\nNo general-status reply received.';
+  else $('healthRaw').textContent+='\nGeneral status returned; paper/overheat flags are not verified for P1S.';
+ }catch(e){$('healthBattery').textContent='Unavailable';$('healthRaw').textContent+='\nStatus check error: '+e.message;}
+ finally{healthBusy=false;$('healthRefresh').disabled=!btDevice?.gatt?.connected;}
+}
+$('healthRefresh').onclick=refreshPrinterHealth;
+let btDevice=null,btBusy=false;
+function btMessage(message){$('btLog').textContent=message;console.log('[Paperang Bluetooth]',message)}
+function btStatus(connected){$('btState').textContent=connected?'Connected: '+(btDevice?.name||'Paperang'):'Not connected';$('btDisconnect').disabled=!connected;$('healthConnection').textContent=connected?'Connected':'Disconnected';$('healthRefresh').disabled=!connected||healthBusy;}
+function btReady(name){btStatus(true);btMessage('Connected to '+name+' using '+bleChar.uuid+'. Ready to print via the tested 20-byte transport.');}
+async function btAttach(device){
+  const srv=await device.gatt.connect();
+  const cands=[],notifies=[];
+  for(const s of await srv.getPrimaryServices())for(const c of await s.getCharacteristics()){
+    const p=c.properties;
+    if(p.writeWithoutResponse||p.write)cands.push(c);
+    if(p.notify)notifies.push(c);
+  }
+  // Preserve source behavior: prefer writeWithoutResponse, then first writable characteristic.
+  bleChar=cands.find(c=>c.properties.writeWithoutResponse)||cands[0]||null;
+  if(!bleChar)throw Error('No writable Bluetooth characteristic found.');
+  notifyChar=null;notificationBuffer=new Uint8Array(0);clearHealth();
+  // Prefer the P1S notification characteristic observed in the actual BLE scan.
+  const candidate=notifies.find(c=>c.uuid.toLowerCase()==='49535343-1e4d-4bd9-ba61-23c647249616')||notifies.find(c=>c.uuid.toLowerCase()==='0000ff01-0000-1000-8000-00805f9b34fb')||notifies[0];
+  if(candidate){try{await candidate.startNotifications();candidate.addEventListener('characteristicvaluechanged',printerNotifications);notifyChar=candidate;}catch(e){$('healthRaw').textContent='Notifications unavailable: '+e.message;}}
+  btDevice=device;port=null;btReady(device.name||'Paperang');
+  device.addEventListener('gattserverdisconnected',()=>{if(btDevice===device){bleChar=null;notifyChar=null;clearHealth();btStatus(false);btMessage('Bluetooth disconnected. Reconnect to print.')}});
+}
+async function btConnect(){
+  if(!navigator.bluetooth)return btMessage('Web Bluetooth requires Chrome/Edge on localhost or HTTPS.');
+  try{const dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Paperang'},{namePrefix:'MiaoMiaoJi'}],optionalServices:[0xffe0,0xff00,0xae00,0xfee7,'49535343-fe7d-4ae5-8fa9-9fafd205e455','0000ff00-0000-1000-8000-00805f9b34fb']});await btAttach(dev)}
+  catch(e){btMessage('Bluetooth connection error: '+e.message);btStatus(false)}
+}
+async function btReconnect(){
+  if(!navigator.bluetooth?.getDevices)return btMessage('Reconnect unavailable; use Connect.');
+  try{const ds=await navigator.bluetooth.getDevices(),dev=ds.find(d=>/paperang|miaomiao/i.test(d.name||''));if(!dev)throw Error('No previously allowed Paperang printer');await btAttach(dev)}catch(e){btMessage('Reconnect: '+e.message)}
+}
+function btDisconnect(){btDevice?.gatt?.disconnect();bleChar=null;notifyChar=null;btDevice=null;clearHealth();btStatus(false);btMessage('Disconnected.');}
+async function printBluetooth(){
+  if(!bleChar||!btDevice?.gatt?.connected)throw Error('Connect Paperang via Bluetooth before printing.');
+  if(btBusy||healthBusy)throw Error('A printer status check or print is currently in progress.');
+  btBusy=true;
+  try{crcKey=KEY_STD;idx=0;btMessage('Sending picture over Bluetooth ('+$('sp').value+' mode)…');await doPrint();btMessage('Print commands sent successfully. Check the output on the Paperang.');}
+  catch(e){btMessage('Bluetooth print error: '+e.message);throw e}
+  finally{btBusy=false}
+}
+async function printOut(){return $('printMode').value==='windows'?printWindows():printBluetooth()}
+$('printMode').value='bluetooth';
+$('printMode').onchange=()=>btMessage($('printMode').value==='windows'?'Windows dialog mode selected.':'Direct Bluetooth mode selected.');
+$('btConnect').onclick=btConnect;$('btReconnect').onclick=btReconnect;$('btDisconnect').onclick=btDisconnect;
+$('print').onclick=async()=>{try{await printOut()}catch(e){alert('Printing failed: '+e.message)}};
+$('dens').oninput=e=>$('dv').textContent=e.target.value;
+$('th').oninput=e=>$('tv').textContent=e.target.value;
+$('pad').oninput=e=>$('pv').textContent=e.target.value;
+$('sp').onchange=()=>btMessage('Transfer mode: '+$('sp').selectedOptions[0].text+'.');
+let CUST={};try{CUST=JSON.parse(localStorage.getItem('pbCust')||'{}')}catch(e){}
+function applyDef(){const k=$('lay').value,d=CUST[k]||DEF[k];['t1','c1','c2','c3','t2'].forEach((id,i)=>$(id).value=d[i])}
+function flashMsg(m){const s=$('umsg');s.textContent=m;s.style.display='inline-block';clearTimeout(flashMsg.t);flashMsg.t=setTimeout(()=>s.style.display='none',3000)}
+$('upd').onclick=()=>{const k=$('lay').value;CUST[k]=['t1','c1','c2','c3','t2'].map(id=>$(id).value);try{localStorage.setItem('pbCust',JSON.stringify(CUST))}catch(e){}flashMsg('Saved for the '+$('lay').selectedOptions[0].text+' layout ✓')};
+$('rst').onclick=()=>{CUST={};try{localStorage.removeItem('pbCust')}catch(e){}applyDef();draw();flashMsg('Reset to the original text ✓')};
+applyDef();
+function buildThumbs(){raw=null;_pc={};$('lgrid').innerHTML='';
+ KL.forEach(([k,n])=>{$('lay').value=k;applyDef();draw();const b=document.createElement('button');b.className='lcard';const im=new Image();im.alt=n;im.src=out.toDataURL();const sp=document.createElement('span');sp.textContent=n;b.append(im,sp);
+  b.onclick=()=>{$('lay').value=k;applyDef();draw();go('pg-booth')};$('lgrid').append(b)})}
+function boothReset(){busy=false;raw=null;_pc={};draw();$('kcam').style.display='block';$('kres').style.display='none';$('kshut').style.display='flex';$('kback2').style.display='';$('kmsg').textContent='';$('kcnt').textContent='';$('kcount').textContent='';$('bt').textContent='Strike a pose! 🤩'}
+$('kstart').onclick=async()=>{$('kerr').textContent='';if(await startCam())go('pg-layout')};
+$('ktest').onclick=()=>go('pg-test');$('backk').onclick=()=>go('pg-start');
+$('kback1').onclick=()=>go('pg-start');$('kback2').onclick=()=>go('pg-layout');
+$('kshut').onclick=async()=>{
+ if(busy)return;busy=true;$('kshut').style.display='none';$('kback2').style.display='none';
+ const kc=$('kcount');$('bt').textContent='Get ready… 😄';
+ for(let i=5;i>0;i--){kc.textContent=i;await sleep(1000)}
+ kc.textContent='';const f=$('kflash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,150);
+ const v=$('kcam'),t=document.createElement('canvas');t.width=t.height=Math.min(v.videoWidth,v.videoHeight);const x=t.getContext('2d');x.translate(t.width,0);x.scale(-1,1);
+ x.drawImage(v,(v.videoWidth-t.width)/2,(v.videoHeight-t.height)/2,t.width,t.height,0,0,t.width,t.height);setRaw(t);
+ v.style.display='none';$('kres').src=out.toDataURL();$('kres').style.display='block';
+ $('bt').textContent='Printing… 🖨️';$('kmsg').textContent='Please wait, your picture is coming out!';
+ let ok=true;try{await printOut()}catch(e){ok=false;log('Print error: '+e.message)}
+ $('bt').textContent=ok?'All done! 🎉':'Oops! 🙈';
+ $('kmsg').textContent=ok?'Print command sent! Check the printer for your picture.':'Printer is not ready. Open Testing / Printer setup for details.';
+ let n=10;const tick=()=>{if(n===0){go('pg-start');return}$('kcnt').textContent='Back to start in '+n+'…';n--;kt=setTimeout(tick,1000)};tick()};
+draw();
+</script></body></html>
