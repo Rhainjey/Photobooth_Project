@@ -103,11 +103,11 @@ button.shutter small{font-size:20px;font-weight:700}button.shutter:active{transf
   <div><button id="upd">Update</button><button class="ghost" id="rst">Reset</button> <span id="umsg" class="status" style="display:none"></span></div>
   <label>Paper size (mm): width / height <small>(height 0 = fit to the picture, for continuous rolls)</small><span style="display:flex;gap:6px"><input type="text" id="lw" value="57" inputmode="numeric"><input type="text" id="lh" value="0" inputmode="numeric"></span></label>
   <label>QR link<input type="text" id="qr" value="https://github.com/tinyprinter/python-paperang"></label>
-  <label>Print darkness <span id="dv">60</span><input type="range" id="dens" min="0" max="100" value="60"></label>
+  <label>Print darkness <span id="dv">30</span><input type="range" id="dens" min="0" max="100" value="30"></label>
   <label>Bit order <select id="bo"><option value="msb" selected>MSB first (working default)</option><option value="lsb">LSB first</option></select></label>
-  <label>Bluetooth transfer speed <select id="sp"><option value="safe">Safe · V5 working settings</option><option value="balanced" selected>Balanced · smoother (recommended test)</option><option value="fast">Fast · experimental</option></select></label>
+  <label>Bluetooth transfer speed <select id="sp"><option value="safe" selected>Safe · V5 working settings</option><option value="balanced">Balanced · smoother (recommended test)</option><option value="fast">Fast · experimental</option></select></label>
   <p class="hint">Balanced/Fast reduce transmission pauses. If output has missing lines or errors, switch back to Safe.</p>
-  <label>Black threshold <span id="tv">140</span><input type="range" id="th" min="80" max="200" value="140"></label>
+  <label>Black threshold <span id="tv">120</span><input type="range" id="th" min="80" max="200" value="120"></label>
   <label>Blank space at bottom <span id="pv">40</span> pixels<input type="range" id="pad" min="0" max="300" step="10" value="40"></label>
   
  </section>
@@ -180,11 +180,13 @@ function drawSocial(){
   for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(W/2+12+i*8,iy-2,1.6,0,Math.PI*2);ctx.fill()}
   ctx.beginPath();ctx.moveTo(W-40,iy-17);ctx.lineTo(W-22,iy-17);ctx.lineTo(W-22,iy+13);ctx.lineTo(W-31,iy+5);ctx.lineTo(W-40,iy+13);ctx.closePath();ctx.stroke();
   ctx.restore();
-  const ty=iy+30;ctx.font='bold 13px sans-serif';ctx.fillText('1314 likes',20,ty);
-  ctx.font='12px sans-serif';
-  const fit=(t,y)=>{let s=t;while(ctx.measureText(s).width>W-120&&s.length>3)s=s.slice(0,-1);ctx.fillText(s,20,y)};
-  fit($('c1').value,ty+20);fit($('c2').value,ty+38);fit($('c3').value,ty+56);
-  ctx.fillStyle='#444';ctx.fillText('All 520 comments',20,ty+78);ctx.fillStyle='#000';
+  const ty=iy+30;ctx.fillStyle='#000';ctx.font='bold 16px Arial,sans-serif';ctx.fillText('1314 likes',20,ty);
+  // Bold captions; reserve the right side for the QR code.
+  ctx.font='bold 14px Arial,sans-serif';
+  for(const [i,id] of ['c1','c2','c3'].entries()){
+    ctx.fillText(clipText($(''+id).value,252),20,ty+22+i*19);
+  }
+  ctx.font='bold 13px Arial,sans-serif';ctx.fillText('All 520 comments',20,ty+82);
   try{const q=qrcode(0,'M');q.addData($('qr').value||' ');q.make();const n=q.getModuleCount(),qs=72,m=qs/n,qx=W-qs-24,qy=ty+8;
     ctx.fillStyle='#fff';ctx.fillRect(qx-3,qy-3,qs+6,qs+6);ctx.fillStyle='#000';
     for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))ctx.fillRect(qx+c*m,qy+r*m,Math.ceil(m),Math.ceil(m))}catch(e){}
@@ -205,6 +207,7 @@ function setRaw(s){raw=s;_pc={};draw()}
 function getPhoto(s){if(!raw)return null;return _pc[s]||(_pc[s]=dither(raw,s))}
 function ph(x,y,s){const p=getPhoto(s);if(p)ctx.drawImage(p,x,y,s,s);else{ctx.fillStyle='#ddd';ctx.fillRect(x,y,s,s);ctx.fillStyle='#000';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('Your photo here',x+s/2,y+s/2);ctx.textAlign='left'}ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.setLineDash([]);ctx.strokeRect(x,y,s,s)}
 function fitTxt(t,mw){let s=t;while(ctx.measureText(s).width>mw&&s.length>1)s=s.slice(0,-1);return s}
+function clipText(t,mw){let s=String(t||'');if(ctx.measureText(s).width<=mw)return s;while(s.length>1&&ctx.measureText(s+'…').width>mw)s=s.slice(0,-1);return s+'…'}
 function wrapL(c,t,mw){const o=[];let l='';for(const w of t.split(/\s+/).filter(Boolean)){const tt=l?l+' '+w:w;if(c.measureText(tt).width>mw&&l){o.push(l);l=w}else l=tt}if(l)o.push(l);return o}
 function dash(y){ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=1.5;ctx.strokeStyle='#000';ctx.beginPath();ctx.moveTo(24,y);ctx.lineTo(W-24,y);ctx.stroke();ctx.restore()}
 function zig(h){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,h);const n=30,st=(W-20)/n;ctx.beginPath();ctx.moveTo(10,8);for(let i=0;i<n;i++){ctx.lineTo(10+i*st+st/2,2);ctx.lineTo(10+(i+1)*st,8)}ctx.lineTo(W-10,h-8);for(let i=n;i>0;i--){ctx.lineTo(10+i*st-st/2,h-2);ctx.lineTo(10+(i-1)*st,h-8)}ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke()}
@@ -217,32 +220,32 @@ function drawReceipt(){
  zig(H);ctx.fillStyle='#000';
  const t=$('t1').value||'RECEIPT';let fs=40;ctx.font='900 '+fs+'px Georgia,serif';while(ctx.measureText(t).width>W-150&&fs>16){fs-=2;ctx.font='900 '+fs+'px Georgia,serif'}
  ctx.textAlign='center';ctx.fillText(t,W/2,50);ctx.font='bold 16px '+MONO;ctx.textAlign='left';ctx.fillText('*****',22,46);ctx.textAlign='right';ctx.fillText('*****',W-22,46);
- dash(66);ctx.textAlign='left';ctx.font='bold 11px '+MONO;ctx.fillText('QTY',30,86);ctx.fillText('ITEM',88,86);dash(96);
- ctx.font='11px '+MONO;['c1','c2','c3'].forEach((id,i)=>{const [q,it]=parts(id);ctx.fillText(q,30,116+i*18);ctx.fillText(fitTxt(it,W-88-26),88,116+i*18)});
+ dash(66);ctx.textAlign='left';ctx.font='bold 14px '+MONO;ctx.fillText('QTY',30,86);ctx.fillText('ITEM',88,86);dash(98);
+ ctx.font='bold 14px '+MONO;['c1','c2','c3'].forEach((id,i)=>{const [q,it]=parts(id);ctx.fillText(clipText(q,52),30,118+i*19);ctx.fillText(clipText(it,W-88-22),88,118+i*19)});
  dash(164);ph(28,180,328);
- ctx.textAlign='center';ctx.fillStyle='#000';ctx.font='bold 13px '+MONO;ctx.fillText(fitTxt('******* '+($('t2').value||'THANK YOU')+' *******',W-40),W/2,540);
+ ctx.textAlign='center';ctx.fillStyle='#000';ctx.font='bold 16px '+MONO;ctx.fillText(clipText('*** '+($('t2').value||'THANK YOU')+' ***',W-40),W/2,540);
  barcode(72,556,240,46)}
 
-function trackLines(){const m=document.createElement('canvas').getContext('2d');m.font='9px '+MONO;return wrapL(m,$('t2').value,280)}
-function trackH(){return 570+(Math.max(1,trackLines().length)-1)*13+142}
+function trackLines(){const m=document.createElement('canvas').getContext('2d');m.font='bold 13px '+MONO;return wrapL(m,$('t2').value,310)}
+function trackH(){return 578+(Math.max(1,trackLines().length)-1)*19+154}
 function drawTrack(){
  zig(H);ctx.fillStyle='#000';ctx.textAlign='center';
  const tt0=($('t1').value||'SUMMER go crazy').trim(),i0=tt0.indexOf(' '),a=(i0<0?tt0:tt0.slice(0,i0)).toUpperCase(),b=i0<0?'':tt0.slice(i0+1);
  let fs=38;ctx.font='900 '+fs+'px "Arial Black",Arial,sans-serif';while(ctx.measureText(a).width>W-80&&fs>14){fs-=2;ctx.font='900 '+fs+'px "Arial Black",Arial,sans-serif'}
  ctx.fillText(a,W/2,62);ctx.font='italic bold 24px Georgia,serif';ctx.fillText(b,W/2,88);
- ctx.font='bold 9px '+MONO;ctx.fillText('TRACK ORDER',W/2,114);ctx.font='8px '+MONO;ctx.fillText(new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}).toUpperCase(),W/2,127);
- dash(138);let tot=0,ok=true;ctx.font='10px '+MONO;
- ['c1','c2','c3'].forEach((id,i)=>{const [r,l]=[parts(id)[0],parts(id)[1]];ctx.textAlign='left';ctx.fillText(fitTxt(l,W-52-60),26,156+i*16);ctx.textAlign='right';ctx.fillText(r,W-26,156+i*16);const m=r.match(/^(\d+):(\d+)$/);if(m)tot+=+m[1]*60+ +m[2];else ok=false});
- dash(198);ctx.textAlign='left';ctx.fillText('TOTAL',26,214);ctx.textAlign='right';ctx.fillText(ok?String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0'):'--:--',W-26,214);dash(224);
- ph(40,240,304);
- const ls=trackLines();ctx.textAlign='center';ctx.font='9px '+MONO;ls.forEach((l,i)=>ctx.fillText(l,W/2,570+i*13));
- const ye=570+(Math.max(1,ls.length)-1)*13;ctx.font='8px '+MONO;ctx.fillText('ALL RIGHTS RESERVED',W/2,ye+26);drawQR(W/2-32,ye+34,64);ctx.font='bold 8px '+MONO;ctx.fillText('THE ART OF THE MOMENT',W/2,ye+116)}
+ ctx.font='bold 13px '+MONO;ctx.fillText('TRACK ORDER',W/2,114);ctx.font='bold 12px '+MONO;ctx.fillText(new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}).toUpperCase(),W/2,127);
+ dash(140);let tot=0,ok=true;ctx.font='bold 13px '+MONO;
+ ['c1','c2','c3'].forEach((id,i)=>{const [r,l]=[parts(id)[0],parts(id)[1]];ctx.textAlign='left';ctx.fillText(clipText(l,W-52-76),26,159+i*19);ctx.textAlign='right';ctx.fillText(clipText(r,67),W-26,159+i*19);const m=r.match(/^(\d+):(\d+)$/);if(m)tot+=+m[1]*60+ +m[2];else ok=false});
+ dash(220);ctx.textAlign='left';ctx.fillText('TOTAL',26,238);ctx.textAlign='right';ctx.fillText(ok?String(Math.floor(tot/60)).padStart(2,'0')+':'+String(tot%60).padStart(2,'0'):'--:--',W-26,238);dash(248);
+ ph(40,264,304);
+ const ls=trackLines();ctx.textAlign='center';ctx.font='bold 13px '+MONO;ls.forEach((l,i)=>ctx.fillText(clipText(l,310),W/2,590+i*19));
+ const ye=590+(Math.max(1,ls.length)-1)*19;ctx.font='bold 12px '+MONO;ctx.fillText('ALL RIGHTS RESERVED',W/2,ye+28);drawQR(W/2-36,ye+41,72);ctx.font='bold 12px '+MONO;ctx.fillText('THE ART OF THE MOMENT',W/2,ye+133)}
 
 function drawPolaroid(){
  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#000';ctx.lineWidth=3;rr(8,14,W-16,H-24,6);ctx.stroke();ph(32,40,320);
  ctx.save();ctx.translate(W/2,14);ctx.rotate(-.05);ctx.fillStyle='#fff';ctx.fillRect(-38,-13,76,26);ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.strokeRect(-38,-13,76,26);ctx.restore();
  ctx.fillStyle='#000';ctx.textAlign='center';ctx.font='italic 30px "Brush Script MT","Segoe Script",cursive';ctx.fillText(fitTxt($('c1').value,W-70),W/2,412);
- ctx.font='11px '+MONO;ctx.fillText(fitTxt($('c2').value,W-70),W/2,438);ctx.fillText(fitTxt($('c3').value,W-70),W/2,456)}
+ ctx.font='bold 15px '+MONO;ctx.fillText(clipText($('c2').value,W-70),W/2,441);ctx.fillText(clipText($('c3').value,W-70),W/2,463)}
 
 const LAY={social:[620,drawSocial],receipt:[632,drawReceipt],track:[0,drawTrack],polaroid:[480,drawPolaroid]};
 function draw(){const k=$('lay').value,h=k==='track'?trackH():LAY[k][0];if(out.height!==h)out.height=h;H=h;ctx.setLineDash([]);ctx.textAlign='left';ctx.textBaseline='alphabetic';LAY[k][1]()}
