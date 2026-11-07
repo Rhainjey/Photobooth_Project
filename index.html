@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Photobooth</title>
+<title>Paperang Photobooth</title>
 <link href='https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap' rel='stylesheet'>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
@@ -40,8 +40,6 @@ button.lcard img{width:100%;max-height:280px;object-fit:contain}button.lcard:act
 #kflash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .4s;border-radius:28px;pointer-events:none}
 button.shutter{width:130px;height:130px;border-radius:50%;font-size:48px;line-height:1;border:8px solid #fff;background:#ff4d4d;box-shadow:0 8px 0 #b82e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;margin:0}
 button.shutter small{font-size:20px;font-weight:700}button.shutter:active{transform:translateY(6px);box-shadow:0 2px 0 #b82e2e}
-@media print{html,body{margin:0!important;padding:0!important;background:#fff!important}body>*:not(#printarea){display:none!important}#printarea{display:flex!important;justify-content:center;align-items:flex-start;position:fixed;left:0;top:0;width:100%;height:100%;padding-top:1mm;box-sizing:border-box}#printarea img{display:block}}
-#printarea{display:none}
 .keys{display:grid;grid-template-columns:repeat(3,84px);gap:12px}
 button.kkey{font:inherit;font-size:30px;font-weight:700;width:84px;height:84px;border-radius:50%;border:0;background:#fff;color:#2b2350;box-shadow:0 5px 0 rgba(0,0,0,.18);margin:0;padding:0}button.kkey:active{transform:translateY(4px)}
 #pindots{font-size:34px;letter-spacing:8px;min-height:44px}
@@ -51,11 +49,11 @@ button.kkey{font:inherit;font-size:30px;font-weight:700;width:84px;height:84px;b
 .stfcard button.ghost{color:#2b2350;border-color:#2b2350}.stfcard table{width:100%;border-collapse:collapse;margin:12px 0}.stfcard td,.stfcard th{border-bottom:1px solid #ddd;padding:4px 6px;text-align:left}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#f3efff;border-radius:12px;padding:10px;text-align:center}.stat b{font-size:26px;display:block}
 #kwarn{color:#b00020;font-weight:700}
-</style><style id='pstyle'></style></head><body>
+</style></head><body>
 <div id='pg-start' class='page kid on'>
  <h1>📸 Photo Booth!</h1><p>Smile, strike a pose, and take a picture home!</p>
  <button id='kstart' class='kbtn huge'>▶ Click Start</button><p id='kerr'></p><p id='kwarn'></p>
- <div class='corner'><button class='ghost' id='ktest'>Staff</button></div>
+ <div class='corner'><button class='ghost' id='kconn'>🖨 Connect printer</button><span id='kst'>Printer: Not connected</span><button class='ghost' id='ktest'>Staff</button></div>
 </div>
 <div id='pg-layout' class='page kid'>
  <h2>Pick your style! 🎨</h2><div class='lgrid' id='lgrid'></div>
@@ -91,8 +89,8 @@ button.kkey{font:inherit;font-size:30px;font-weight:700;width:84px;height:84px;b
 </div>
 <main id='pg-test' class='page'>
 <button class='ghost' id='backk'>← Back to kiosk</button>
-<h1>🛠 Testing — Photobooth</h1>
-<p class="sub">Take a photo, pick a layout, and print it on your label printer over USB.</p>
+<h1>🛠 Testing — Paperang Photobooth</h1>
+<p class="sub">Take a photo, pick a layout, and print it on your Paperang thermal printer over Bluetooth.</p>
 <div class="grid">
  <section class="card">
   <video id="cam" autoplay playsinline muted style="transform:scaleX(-1);aspect-ratio:1/1;object-fit:cover"></video>
@@ -106,31 +104,37 @@ button.kkey{font:inherit;font-size:30px;font-weight:700;width:84px;height:84px;b
   <label>Line 3<input type="text" id="c3" value="WITH THE PEOPLE YOU LIKE"></label>
   <label>Footer / paragraph (receipt layouts)<input type="text" id="t2" value=""></label>
   <div><button id="upd">Update</button><button class="ghost" id="rst">Reset</button> <span id="umsg" class="status" style="display:none"></span></div>
-  <label>Paper preset<select id="pz" style="width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)"><option value="a4">Epson L3210: A4 color, 210 × 297 mm</option><option value="long">Epson L3210: long sheet, 210 × 420 mm (A3 length)</option><option value="way">Thermal waybill label 100 × 150 mm</option><option value="rec">Thermal receipt roll 57 mm</option></select></label>
-  <label>Paper size (mm): width / height <small>(height 0 = fit to the picture, for rolls)</small><span style="display:flex;gap:6px"><input type="text" id="lw" value="210" inputmode="numeric"><input type="text" id="lh" value="297" inputmode="numeric"></span></label>
   <label>QR link<input type="text" id="qr" value="https://github.com/tinyprinter/python-paperang"></label>
+  <label>Print darkness <span id="dv">60</span><input type="range" id="dens" min="0" max="100" value="60"></label>
+  <label>Bit order <small>(try the other if text prints mirrored or scrambled)</small><select id="bo" style="width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)"><option value="msb" selected>MSB first (default)</option><option value="lsb">LSB first</option></select></label>
+  <label>Transfer <small>(Safe is slower but avoids dropped data)</small><select id="sp" style="width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)"><option value="safe" selected>Safe (default)</option><option value="fast">Fast</option></select></label>
+  <label>Black threshold <span id="tv">140</span> <small>(higher = bolder text)</small><input type="range" id="th" min="80" max="200" value="140"></label>
+  <label>Blank space at the bottom <span id="pv">120</span> px <small>(so the whole image ejects)</small><input type="range" id="pad" min="0" max="300" step="10" value="120" oninput="document.getElementById('pv').textContent=this.value"></label>
+  <div><button class="ghost" id="test">Test print pattern</button></div>
   
  </section>
  <section class="card">
   <canvas id="out" class="out" width="384" height="620"></canvas>
-  <div><button id="print">🖨 Print</button><button id="dl" class="ghost">Save PNG</button></div>
+  <p><span class="status" id="st">Not connected</span></p>
+  <div><button id="ble">Connect (Bluetooth)</button><button id="ser" class="ghost">Connect (paired / Serial)</button><button id="print" disabled>🖨 Print</button><button id="dl" class="ghost">Save PNG</button></div>
+  <div id="log"></div>
  </section>
 </div>
 <div class="card" style="margin-top:16px;font-size:14px">
- <b>Printing setup</b>
+ <b>How connecting works</b>
  <ul>
-  <li><b>Epson L3210:</b> install the Epson driver, load A4 paper, and in the print dialog choose the L3210 with the same paper size, <b>Margins: None</b>, <b>Scale: 100%</b>, and a photo or high quality mode. The L3210 prints up to 215.9 mm wide and 1200 mm long, so A3 sheets cannot be used.</li>
-  <li><b>Long sheet:</b> add a custom 210 × 420 mm paper size in the Epson driver (Printing preferences &rarr; Custom) and choose it in the print dialog.</li>
-  <li><b>Thermal TP870:</b> use the waybill or receipt preset and set the matching paper size in its driver.</li>
-  <li>For the kiosk, start Chrome with the <code>--kiosk-printing</code> flag so it prints straight to the default printer without the dialog.</li>
+  <li>Use <b>Chrome or Edge</b> (desktop or Android) over HTTPS. iPhone and iPad Safari have no Bluetooth or Serial API.</li>
+  <li><b>Connect (Bluetooth)</b> scans for a device named &ldquo;Paperang&hellip;&rdquo; using Web Bluetooth. Do not pair it in your device settings first.</li>
+  <li>If your Paperang only speaks classic Bluetooth, pair it in your OS first, then use <b>Connect (paired / Serial)</b> and choose its port.</li>
+  <li>Defaults that worked for the P1S: <b>Safe</b> transfer, <b>MSB first</b> bit order, 120 px blank space at the bottom.</li>
+  <li>Protocol credit: <a href="https://github.com/tinyprinter/python-paperang" target="_blank" rel="noopener">tinyprinter/python-paperang</a> (GitHub).</li>
  </ul>
 </div>
 </main>
-<div id="printarea"><img id="pimg" alt=""></div>
 <script>
 const W=384,$=id=>document.getElementById(id);let H=620;
 const out=$('out'),ctx=out.getContext('2d'),cam=$('cam');
-let photo=null;const log=m=>console.log(m);
+let photo=null,port=null,bleChar=null;const log=m=>{const l=$('log');if(l){l.textContent+=m+'\n';l.scrollTop=1e9}};
 
 function dither(src,size){ // grayscale + contrast + Floyd-Steinberg
   const c=document.createElement('canvas');c.width=c.height=size;const x=c.getContext('2d');
@@ -266,24 +270,64 @@ async function startCam(){if(stream&&stream.active)return true;
  try{try{stream=await navigator.mediaDevices.getUserMedia(camConstraints())}catch(e2){stream=await navigator.mediaDevices.getUserMedia({video:true})};$('camst').textContent='';listCams();cam.srcObject=stream;$('kcam').srcObject=stream;$('snap').disabled=false;return true}
  catch(e){$('kerr').textContent='The camera is blocked. Please ask a grown-up to allow it.';$('camst').textContent='Camera error: '+e.name;return false}}
 const KL=[['social','📱 Selfie Post'],['receipt','🧾 Receipt'],['track','🎵 Track Order'],['polaroid','📷 Polaroid'],['strip','🎞 Photo Strip (3 shots)']];
-/* ---- USB printing through the browser print dialog / Windows driver ---- */
-async function printOut(){
- const pz=$('pz').value,ink=pz==='a4'||pz==='long',way=pz==='way';
- const lw=+$('lw').value||(ink?210:way?100:57),lh=+$('lh').value||(ink?297:way?150:0);
- let url;
- if(ink){SC=6;_pc={};draw();url=out.toDataURL('image/png');SC=1;_pc={};draw()}
- else{const sx=way?Math.max(1,Math.floor(lw*8/W)):4,c=document.createElement('canvas');c.width=W*sx;c.height=H*sx;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(out,0,0,c.width,c.height);url=c.toDataURL('image/png')}
- let iw=lw-2,ih=iw*H/W;const pageH=lh||Math.ceil(ih)+2;if(ih>pageH-1){ih=pageH-1;iw=ih*W/H}
- const pa=document.getElementById('printarea');pa.style.padding=ink?'8mm':'';pa.style.alignItems=ink?'center':'';
- $('pimg').style.cssText=ink?'width:100%;height:100%;object-fit:contain':way?'width:100%;height:100%;object-fit:contain;image-rendering:pixelated':'width:'+iw+'mm;height:'+ih+'mm';
- $('pstyle').textContent='@page{size:'+lw+'mm '+pageH+'mm;margin:0}';
- const img=$('pimg');await new Promise(r=>{img.onload=r;img.src=url});
- await new Promise(r=>{const done=()=>{window.removeEventListener('afterprint',done);r()};window.addEventListener('afterprint',done);setTimeout(done,20000);window.print()})}
-const PZ={a4:[210,297],long:[210,420],way:[100,150],rec:[57,0]};
-function setPz(v,save){$('pz').value=v;$('lw').value=PZ[v][0];$('lh').value=PZ[v][1];INK=(v==='a4'||v==='long');_pc={};if(save){try{localStorage.setItem('pbPz',v)}catch(e){}}}
-$('pz').onchange=()=>{setPz($('pz').value,true);draw()};
-try{const v=localStorage.getItem('pbPz');setPz(v&&PZ[v]?v:'a4',false)}catch(e){setPz('a4',false)}
-$('print').onclick=async()=>{try{await printOut()}catch(e){alert('Could not open the print dialog: '+e.message)}};
+/* ---- Paperang printer (BLE or paired serial), protocol from tinyprinter/python-paperang ---- */
+const SVCS=[0xffe0,0xff00,0xae00,0xfee7,'49535343-fe7d-4ae5-8fa9-9fafd205e455','0000ff00-0000-1000-8000-00805f9b34fb'];
+const KEY_STD=0x6968634^0x2e696d,KEY_DEV=0x35769521;
+const CRCT=new Uint32Array(256).map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});
+function crc32(b,seed){let c=(seed^0xffffffff)>>>0;for(const v of b)c=CRCT[(c^v)&255]^(c>>>8);return (c^0xffffffff)>>>0}
+let crcKey=KEY_STD,pidx=0;
+function pkt(cmd,data){data=data||new Uint8Array(0);const n=data.length,o=new Uint8Array(n+10),dv=new DataView(o.buffer);
+ o[0]=2;o[1]=cmd;o[2]=pidx++&255;dv.setUint16(3,n,true);o.set(data,5);dv.setUint32(5+n,crc32(data,crcKey),true);o[9+n]=3;return o}
+const u32=v=>{const b=new Uint8Array(4);new DataView(b.buffer).setUint32(0,v,true);return b};
+const u16=v=>{const b=new Uint8Array(2);new DataView(b.buffer).setUint16(0,v,true);return b};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function send(bytes){
+ if(port){const w=port.writable.getWriter();try{for(let i=0;i<bytes.length;i+=600){await w.write(bytes.subarray(i,i+600));await wait(20)}}finally{w.releaseLock()}}
+ else if(bleChar){const p=bleChar.properties;for(let i=0;i<bytes.length;i+=20){const c=bytes.slice(i,i+20);
+  try{if(p.writeWithoutResponse&&!($('sp').value==='safe'&&p.write))await bleChar.writeValueWithoutResponse(c);else await bleChar.writeValueWithResponse(c)}
+  catch(e){await wait(40);if(p.write)await bleChar.writeValueWithResponse(c);else throw e}
+  await wait(p.writeWithoutResponse?10:0)}}
+ else throw new Error('Not connected')}
+function bitmap(){ // 1 bit per pixel, 48 bytes per row, 1 = black
+ const d=ctx.getImageData(0,0,W,H).data,rows=new Uint8Array(48*(H+ +$('pad').value)),TH=+$('th').value,MS=$('bo').value==='msb';
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;if(.299*d[i]+.587*d[i+1]+.114*d[i+2]<TH)rows[y*48+(x>>3)]|=MS?128>>(x&7):1<<(x&7)}
+ return rows}
+async function doPrint(){
+ const rows=bitmap();log('Printing '+H+' rows\u2026');
+ await send(pkt(0x20,u32(KEY_DEV)));crcKey=KEY_DEV;await wait(100);
+ await send(pkt(0x10,new Uint8Array([Math.round($('dens').value*0.67)])));
+ await send(pkt(0x1e,new Uint8Array([1])));await wait(100);
+ const CH=48*16;for(let i=0;i<rows.length;i+=CH){await send(pkt(0x00,rows.subarray(i,i+CH)));await wait(40)}
+ await send(pkt(0x1a,u16(120)));log('Sent. Feeding paper.')}
+const ready=n=>{$('st').textContent='Connected: '+n;$('print').disabled=false;log('Connected to '+n);crcKey=KEY_STD;pidx=0};
+$('dens').oninput=e=>$('dv').textContent=e.target.value;
+$('th').oninput=e=>$('tv').textContent=e.target.value;
+$('print').onclick=async()=>{try{await doPrint()}catch(e){log('Print error: '+e.message)}};
+$('ble').onclick=async()=>{
+ if(!navigator.bluetooth)return log('Web Bluetooth not supported here. Use Chrome/Edge over HTTPS.');
+ try{const dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Paperang'},{namePrefix:'MiaoMiaoJi'}],optionalServices:SVCS});
+  const srv=await dev.gatt.connect();bleChar=null;const cands=[];
+  for(const sv of await srv.getPrimaryServices())for(const c of await sv.getCharacteristics()){const q=c.properties;log('char '+c.uuid+' [svc '+sv.uuid.slice(4,8)+'] '+['read','write','writeWithoutResponse','notify'].filter(k=>q[k]).join(','));if(q.writeWithoutResponse||q.write)cands.push(c)}
+  bleChar=cands.find(c=>c.properties.writeWithoutResponse)||cands[0]||null;
+  if(!bleChar)throw new Error('No writable characteristic found. The printer may be classic Bluetooth: pair it in your OS and use Serial.');
+  log('Using '+bleChar.uuid);port=null;ready(dev.name||'Paperang');
+  dev.addEventListener('gattserverdisconnected',()=>{$('st').textContent='Disconnected';$('print').disabled=true})
+ }catch(e){log('Bluetooth: '+e.message)}};
+$('ser').onclick=async()=>{
+ if(!navigator.serial)return log('Web Serial not supported here. Use Chrome/Edge on a desktop or laptop.');
+ try{const pt=await navigator.serial.requestPort();try{await pt.open({baudRate:115200})}catch(e){if(e.name!=='InvalidStateError')throw e}port=pt;bleChar=null;ready('Serial port')}catch(e){log('Serial: '+e.message)}};
+$('test').onclick=async()=>{
+ out.height=230;H=230;ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#000';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.strokeRect(2,2,W-4,H-4);
+ ctx.fillRect(10,10,40,10);ctx.fillRect(10,10,10,40);
+ ctx.textAlign='left';ctx.font='bold 38px sans-serif';ctx.fillText('HELLO 123',70,62);
+ ctx.font='16px sans-serif';ctx.fillText('The quick brown fox -> RIGHT',20,100);
+ ctx.font='12px monospace';ctx.fillText('small text 12px: ABCDEFG abcdefg',20,126);
+ ctx.font='9px monospace';ctx.fillText('tiny text 9px: ABCDEFG abcdefg 0123456789',20,148);
+ for(let i=0;i<8;i++){ctx.fillStyle='rgba(0,0,0,'+(i+1)/8+')';ctx.fillRect(20+i*44,170,44,36)}
+ try{await doPrint()}catch(e){log('Print error: '+e.message)}
+ draw()};
+$('kconn').onclick=()=>$('ble').click();
+new MutationObserver(()=>{$('kst').textContent='Printer: '+$('st').textContent.replace('Connected: ','\u2705 ')}).observe($('st'),{childList:true,characterData:true,subtree:true});
 
 /* ---- Staff mode: passcode, counters, paper warning ---- */
 const ST0={pin:'1234',price:0,gate:false,cap:0,left:0,low:10,log:{}};
@@ -345,7 +389,7 @@ $('kshut').onclick=async()=>{
  $('kmsg').textContent='';raw=shots[0];_pc={};draw();
  v.style.display='none';$('kres').src=out.toDataURL();$('kres').style.display='block';
  $('bt').textContent='Printing\u2026 \ud83d\udda8\ufe0f';$('kmsg').textContent='Please wait, your picture is coming out!';
- let ok=true;try{await printOut()}catch(e){ok=false;log('Print error: '+e.message)}
+ let ok=true;try{await doPrint()}catch(e){ok=false;log('Print error: '+e.message)}
  if(ok)stRecord();
  $('bt').textContent=ok?'All done! \ud83c\udf89':'Oops! \ud83d\ude48';
  $('kmsg').textContent=ok?'Grab your picture from the printer!':'The printer is not ready. Please ask a grown-up for help.';
